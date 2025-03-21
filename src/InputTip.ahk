@@ -19,8 +19,6 @@ fileDesc := "InputTip - 一个输入法状态提示工具"
 
 ; 注册表: 开机自启动
 HKEY_startup := "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run"
-; 是否有 powershell
-has_powershell := 1
 
 gc := {
     init: 0,
@@ -77,8 +75,6 @@ favicon := A_IsCompiled ? A_ScriptFullPath : A_ScriptDir "\img\favicon.ico"
 
 TraySetIcon(A_ScriptDir "\InputTipSymbol\default\favicon.png", , 1)
 
-createTaskAndLnk()
-
 checkUpdateDone()
 
 checkUpdateDelay := readIni("checkUpdateDelay", 1440)
@@ -108,7 +104,11 @@ if (hotkey_Pause) {
     }
 }
 
-keyCount := 0
+try {
+    keyCount := A_Args[1]
+} catch {
+    keyCount := 0
+}
 enableKeyCount := readIni("enableKeyCount", 0)
 trayTipTemplate := readIni("trayTipTemplate", "【%appState%中】" fileDesc)
 keyCountTemplate := readIni("keyCountTemplate", "%\n%启动至今，有效的按键次数: %keyCount%")
@@ -125,7 +125,7 @@ updateTip(flag := "") {
             A_IconTip := tip
             return
         }
-        SetTimer(countTimer, delay)
+        SetTimer(countTimer, 50)
         countTimer() {
             static last := ""
             global keyCount

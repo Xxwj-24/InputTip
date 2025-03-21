@@ -1,4 +1,31 @@
 /**
+ * 比对版本号
+ * @param new 新版本号
+ * @param old 旧版本号
+ * @returns {Number}
+ * - new > old : 1
+ * - new < old : -1
+ * - new = old : 0
+ */
+compareVersion(new, old) {
+    newParts := StrSplit(new, ".")
+    oldParts := StrSplit(old, ".")
+    for i, part1 in newParts {
+        try {
+            part2 := oldParts[i]
+        } catch {
+            part2 := 0
+        }
+        if (part1 > part2) {
+            return 1  ; new > old
+        } else if (part1 < part2) {
+            return -1  ; new < old
+        }
+    }
+    return 0  ; new = old
+}
+
+/**
  * 检查版本更新(异步)
  * @param currentVersion 当前版本号
  * @param callback 版本检查完成后的回调函数
@@ -51,32 +78,6 @@ checkVersion(currentVersion, callback, urls := [
             }
         }
     }
-    /**
-     * 比对版本号
-     * @param new 新版本号
-     * @param old 旧版本号
-     * @returns {Number}
-     * - new > old : 1
-     * - new < old : -1
-     * - new = old : 0
-     */
-    compareVersion(new, old) {
-        newParts := StrSplit(new, ".")
-        oldParts := StrSplit(old, ".")
-        for i, part1 in newParts {
-            try {
-                part2 := oldParts[i]
-            } catch {
-                part2 := 0
-            }
-            if (part1 > part2) {
-                return 1  ; new > old
-            } else if (part1 < part2) {
-                return -1  ; new < old
-            }
-        }
-        return 0  ; new = old
-    }
 }
 
 /**
@@ -107,7 +108,7 @@ checkUpdate(init := 0, once := false, force := 0) {
             if (A_IsCompiled) {
                 checkVersion(currentVersion, updateConfirm)
                 updateConfirm(newVersion, url) {
-                    if (WinExist(updateTitle)) {
+                    if (WinExist(updateTitle) || compareVersion(newVersion, currentVersion) <= 0) {
                         return
                     }
                     createGui(updateGui).Show()
@@ -138,6 +139,25 @@ checkUpdate(init := 0, once := false, force := 0) {
                                 "https://github.com/abgox/InputTip/releases/download/v" newVersion "/InputTip.exe"
                             ]
                             done := false
+
+                            downloading(*) {
+                                g := createGuiOpt("InputTip - 版本更新中 " currentVersion " > " newVersion)
+                                g.AddText("cRed", "InputTip 新版本 " newVersion " 下载中...")
+                                g.AddText(, "--------------------------------------------------")
+                                g.AddText("xs", "官网:")
+                                g.AddLink("yp", '<a href="https://inputtip.abgox.com">https://inputtip.abgox.com</a>')
+                                g.AddText("xs", "Github:")
+                                g.AddLink("yp", '<a href="https://github.com/abgox/InputTip">https://github.com/abgox/InputTip</a>')
+                                g.AddText("xs", "Gitee: :")
+                                g.AddLink("yp", '<a href="https://gitee.com/abgox/InputTip">https://gitee.com/abgox/InputTip</a>')
+                                g.AddLink("xs", '版本更新日志:   <a href="https://inputtip.abgox.com/v2/changelog">官网</a>   <a href="https://github.com/abgox/InputTip/blob/main/src/CHANGELOG.md">Github</a>   <a href="https://gitee.com/abgox/InputTip/blob/main/src/CHANGELOG.md">Gitee</a>')
+                                g.Show()
+                                g.OnEvent("Close", downloading)
+                                return g
+                            }
+                            downloadingGui := downloading()
+
+
                             for v in releases {
                                 try {
                                     Download(v, A_AppData "\abgox-InputTip-new-version.exe")
@@ -146,13 +166,16 @@ checkUpdate(init := 0, once := false, force := 0) {
                                     break
                                 }
                             }
+
+                            downloadingGui.Destroy()
+
                             if (done) {
                                 if (enableJABSupport) {
                                     killJAB(1, A_IsCompiled)
                                 }
                                 try {
-                                    FileInstall("utils\update.exe", A_AppData "\abgox-InputTip-update-version.exe", 1)
-                                    Run(A_AppData "\abgox-InputTip-update-version.exe " '"' A_ScriptName '" "' A_ScriptFullPath '"')
+                                    FileInstall("utils\app-update\target\release\app-update.exe", A_AppData "\abgox-InputTip-update-version.exe", 1)
+                                    Run(A_AppData "\abgox-InputTip-update-version.exe " '"' A_ScriptName '" "' A_ScriptFullPath '" ' keyCount, , "Hide")
                                     ExitApp()
                                 } catch {
                                     done := false
@@ -186,7 +209,7 @@ checkUpdate(init := 0, once := false, force := 0) {
                                     yes(*) {
                                         g.Destroy()
                                         try {
-                                            FileDelete(A_AppData "\abgox-InputTip.exe")
+                                            FileDelete(A_AppData "\abgox-InputTip-new-version.exe")
                                         }
                                     }
                                     return g
@@ -232,7 +255,7 @@ checkUpdate(init := 0, once := false, force := 0) {
             } else {
                 checkVersion(currentVersion, updatePrompt)
                 updatePrompt(newVersion, url) {
-                    if (WinExist(updateTitle)) {
+                    if (WinExist(updateTitle) || compareVersion(newVersion, currentVersion) <= 0) {
                         return
                     }
                     createGui(fn).Show()
@@ -389,6 +412,8 @@ checkUpdateDone() {
         }
         try {
             FileDelete(A_AppData "\.abgox-InputTip-update-version-done.txt")
+        }
+        try {
             FileDelete(A_AppData "\abgox-InputTip-update-version.exe")
         }
     }
