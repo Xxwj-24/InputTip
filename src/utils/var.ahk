@@ -1,3 +1,5 @@
+; InputTip
+
 ; g.SetFont(fontOpt*)
 fontOpt := ["s" readIni("gui_font_size", "12"), "Microsoft YaHei"]
 
@@ -8,14 +10,9 @@ modeList := {}
 
 ; 以哪一种状态作为判断依据
 baseStatus := readIni("baseStatus", 0, "InputMethod")
-; 指定的状态码
-statusMode := readIni("statusMode", "", "InputMethod")
-; 指定的切换码
-conversionMode := readIni("conversionMode", "", "InputMethod")
 
-; 是否使用偶数
-evenStatusMode := readIni("evenStatusMode", "", "InputMethod")
-evenConversionMode := readIni("evenConversionMode", "", "InputMethod")
+modeRule := readIni("modeRule", "", "InputMethod")
+modeRules := StrSplit(modeRule, ":")
 
 checkTimeout := readIni("checkTimeout", 500, "InputMethod")
 
@@ -568,7 +565,7 @@ restartJAB() {
                     Run('schtasks /run /tn "abgox.InputTip.JAB.JetBrains"', , "Hide")
                 }
             } else {
-                Run(A_ScriptDir "\InputTip.JAB.JetBrains.exe", , "Hide")
+                Run("InputTip.JAB.JetBrains.ahk", , "Hide", &JAB_PID)
             }
             done := 1
         }

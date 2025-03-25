@@ -1,3 +1,5 @@
+; InputTip
+
 fn_switch_window(*) {
     showGui()
     showGui(deep := "") {
@@ -11,7 +13,7 @@ fn_switch_window(*) {
         }
         createGui(switchWindowGui).Show()
         switchWindowGui(info) {
-            g := createGuiOpt()
+            g := createGuiOpt("InputTip - 设置指定窗口状态自动切换")
             tab := g.AddTab3("-Wrap", ["设置状态自动切换", "关于"])
             tab.UseTab(1)
             g.AddText("Section cRed", "你首先应该点击上方的「关于」查看具体的操作说明                                              ")
@@ -71,6 +73,7 @@ fn_switch_window(*) {
                 }
                 gc.%"LV_" state%.Opt("+Redraw")
                 gc.%state "_title"%.Value .= " ( " gc.%"LV_" state%.GetCount() " 个 )"
+                autoHdrLV(gc.%"LV_" state%)
             }
 
             gc.CN_title := g.AddText("xs w" bw / 3, "中文状态")
@@ -88,7 +91,7 @@ fn_switch_window(*) {
                 gc.LV_CN := g.AddListView("xs -Hdr -LV0x10 -Multi r5 NoSortHdr Sort Grid w" bw / 3, ["中文状态"])
             }
             addItem("CN")
-            gc.LV_CN.ModifyCol(1, "AutoHdr")
+            autoHdrLV(gc.LV_CN)
             gc.LV_CN.OnEvent("DoubleClick", fn_dbClick)
             gc.LV_CN._type := "CN"
 
@@ -103,7 +106,7 @@ fn_switch_window(*) {
                 gc.LV_EN := g.AddListView("yp -Hdr -LV0x10 -Multi r5 NoSortHdr Sort Grid w" bw / 3, ["英文状态"])
             }
             addItem("EN")
-            gc.LV_EN.ModifyCol(1, "AutoHdr")
+            autoHdrLV(gc.LV_EN)
             gc.LV_EN.OnEvent("DoubleClick", fn_dbClick)
             gc.LV_EN._type := "EN"
 
@@ -118,7 +121,7 @@ fn_switch_window(*) {
                 gc.LV_Caps := g.AddListView("yp -Hdr -LV0x10 -Multi r5 NoSortHdr Sort Grid w" bw / 3, ["大写锁定"])
             }
             addItem("Caps")
-            gc.LV_Caps.ModifyCol(1, "AutoHdr")
+            autoHdrLV(gc.LV_Caps)
             gc.LV_Caps.OnEvent("DoubleClick", fn_dbClick)
             gc.LV_Caps._type := "Caps"
 
@@ -136,6 +139,7 @@ fn_switch_window(*) {
                     _handle(to) {
                         g.Destroy()
                         gc.%"LV_" from%.Delete(RowNumber)
+                        autoHdrLV(gc.%"LV_" from%)
                         if (from != "add") {
                             gc.%from "_title"%.Value := SubStr(gc.%from "_title"%.Value, 1, 4) " ( " gc.%"LV_" from%.GetCount() " 个 )"
                             config := "app_" from
@@ -153,6 +157,7 @@ fn_switch_window(*) {
 
                         if (!InStr(":" value ":", ":" exe_name ":")) {
                             gc.%"LV_" to%.Add(, exe_name)
+                            autoHdrLV(gc.%"LV_" to%)
                             gc.%to "_title"%.Value := SubStr(gc.%to "_title"%.Value, 1, 4) " ( " gc.%"LV_" to%.GetCount() " 个 )"
                             if (value) {
                                 writeIni(config, value ":" exe_name)
@@ -166,7 +171,7 @@ fn_switch_window(*) {
                         global app_EN := ":" readIni('app_EN', '') ":"
                         global app_Caps := ":" readIni('app_Caps', '') ":"
                     }
-                    g := createGuiOpt()
+                    g := createGuiOpt("InputTip - 添加")
                     g.AddText(, "要将进程")
                     g.AddText("yp cRed", exe_name)
                     g.AddText("yp", "添加到哪一个自动切换列表中？")
@@ -214,9 +219,11 @@ fn_switch_window(*) {
                     fn_rm(*) {
                         g.Destroy()
                         LV.Delete(RowNumber)
+                        autoHdrLV(LV)
                         gc.%from "_title"%.Value := SubStr(gc.%from "_title"%.Value, 1, 4) " ( " gc.%"LV_" from%.GetCount() " 个 )"
                         try {
                             gc.LV_add.Add(, exe_name, WinGetTitle("ahk_exe " exe_name))
+                            autoHdrLV(gc.LV_add)
                         }
                         config := "app_" from
                         value := readIni(config, "")
@@ -296,7 +303,7 @@ fn_switch_window(*) {
                                 }
                                 createGui(errGui).Show()
                                 errGui(info) {
-                                    g := createGuiOpt()
+                                    g := createGuiOpt("InputTip - 警告")
                                     g.AddText("cRed", exe_name)
                                     g.AddText("yp", "是一个错误的应用进程名称")
                                     g.AddText("xs cRed", '正确的应用进程名称是 xxx.exe 这样的格式`n同时文件名中不能包含这些英文符号 \ / : * ? " < >|')
@@ -330,7 +337,7 @@ fn_switch_window(*) {
                                 }
                                 createGui(existGui).Show()
                                 existGui(info) {
-                                    g := createGuiOpt()
+                                    g := createGuiOpt("InputTip - 警告")
                                     g.AddText("cRed", exe_name)
                                     g.AddText("yp", "这个应用进程已经存在了")
 
@@ -352,6 +359,7 @@ fn_switch_window(*) {
                             }
 
                             gc.%"LV_" to%.Add(, exe_name)
+                            autoHdrLV(gc.%"LV_" to%)
                             if (value) {
                                 writeIni(config, value ":" exe_name)
                             } else {
@@ -380,9 +388,7 @@ fn_switch_window(*) {
                     showGui(1)
                 }
             }
-            gc.LV_add.ModifyCol(1, "AutoHdr")
-            gc.LV_add.ModifyCol(2, "AutoHdr")
-            gc.LV_add.ModifyCol(3, "AutoHdr")
+            autoHdrLV(gc.LV_add)
             tab.UseTab(2)
             g.AddEdit("ReadOnly -VScroll w" w, "1. 如何使用这个配置菜单？`n`n   - 上方的列表页显示的是当前系统正在运行的应用进程(仅前台窗口)`n   - 为了便于操作，白名单中的应用进程也会添加到列表中`n   - 双击列表中任意应用进程，就可以将其添加到下方任意列表中`n   - 如果需要更多的进程，请点击下方的「显示更多进程」以显示后台和隐藏进程`n   - 也可以点击下方的「通过输入进程名称手动添加」直接添加进程名称`n`n   - 下方分别是中文、英文、大写锁定这三个自动切换列表`n   - 在自动切换列表中的应用窗口被激活时，会自动切换到对应的输入法状态`n      - 如果对自动切换的逻辑不理解，请查看下方的相关链接`n   - 双击列表中任意应用进程，就可以将它移除或者添加到其他列表中`n   - 白名单机制下，选择添加且此应用不在白名单中，则会同步添加到白名单中`n`n2. 需要特别注意:`n   - 自动切换生效的前提是当前选择的输入法可以切换状态`n   - 以【美式键盘 ENG】为例`n   - 它只有英文状态和大写锁定，所以只有英文状态的和大写锁定的自动切换有效")
             g.AddLink(, '相关链接: <a href="https://inputtip.abgox.com/FAQ/switch-state">关于指定窗口自动切换状态</a>')

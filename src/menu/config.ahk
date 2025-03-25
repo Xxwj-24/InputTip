@@ -1,3 +1,5 @@
+; InputTip
+
 fn_config(*) {
     if (gc.w.configGui) {
         gc.w.configGui.Destroy()
@@ -63,7 +65,7 @@ fn_config(*) {
                 }
                 createGui(doingGui).Show()
                 doingGui(info) {
-                    g := createGuiOpt()
+                    g := createGuiOpt("InputTip - 尝试恢复鼠标样式")
                     g.AddText(, "正在尝试恢复到启动 InputTip 之前的鼠标样式")
                     g.AddText("cRed", "可能无法完全恢复，你需要进行以下额外步骤或者重启系统:`n1. 进入「系统设置」=>「蓝牙和其他设备」=>「鼠标」=>「其他鼠标设置」`n2. 先更改为另一个鼠标样式方案，再改回你之前使用的方案")
 
@@ -208,7 +210,7 @@ fn_config(*) {
         g.AddText()
         _w := bw / 3 - g.MarginX / 3
         _ := g.AddButton("xs w" _w, "打开鼠标样式目录")
-        _._config := A_ScriptDir "\InputTipCursor"
+        _._config := "InputTipCursor"
         _.OnEvent("Click", fn_open_dir)
         g.AddButton("yp w" _w, "刷新路径列表").OnEvent("Click", fn_config)
         g.AddButton("yp w" _w, "下载鼠标样式扩展包").OnEvent("Click", e_cursor_package)
@@ -217,7 +219,7 @@ fn_config(*) {
                 gc.w.subGui.Destroy()
                 gc.w.subGui := ""
             }
-            g := createGuiOpt("下载鼠标样式扩展包")
+            g := createGuiOpt("InputTip - 下载鼠标样式扩展包")
             g.AddText("Center h30", "从以下任意可用地址中下载鼠标样式扩展包:")
             g.AddLink("xs", '官网: <a href="https://inputtip.abgox.com/download/extra">https://inputtip.abgox.com/download/extra</a>')
             g.AddLink("xs", 'Github: <a href="https://github.com/abgox/InputTip/releases/tag/extra">https://github.com/abgox/InputTip/releases/tag/extra</a>')
@@ -387,7 +389,7 @@ fn_config(*) {
             }
         }
         _ := g.AddButton("xs w" _w, "打开图片符号目录")
-        _._config := A_ScriptDir "\InputTipSymbol"
+        _._config := "InputTipSymbol"
         _.OnEvent("Click", fn_open_dir)
         g.AddButton("yp w" _w, "刷新路径列表").OnEvent("Click", fn_config)
         g.AddButton("yp w" _w, "下载图片符号扩展包").OnEvent("Click", e_pic_package)
@@ -396,7 +398,7 @@ fn_config(*) {
                 gc.w.subGui.Destroy()
                 gc.w.subGui := ""
             }
-            g := createGuiOpt("下载图片符号扩展包")
+            g := createGuiOpt("InputTip - 下载图片符号扩展包")
             g.AddText("Center h30", "从以下任意可用地址中下载图片符号扩展包:")
             g.AddLink("xs", '官网: <a href="https://inputtip.abgox.com/download/extra">https://inputtip.abgox.com/download/extra</a>')
             g.AddLink("xs", 'Github: <a href="https://github.com/abgox/InputTip/releases/tag/extra">https://github.com/abgox/InputTip/releases/tag/extra</a>')

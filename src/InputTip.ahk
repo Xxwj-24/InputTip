@@ -1,24 +1,35 @@
-#Include .\utils\options.ahk
+; InputTip
+
+#Include ./utils/options.ahk
 
 ;@AHK2Exe-SetName InputTip
+;@Ahk2Exe-SetOrigFilename InputTip.ahk
 ;@Ahk2Exe-UpdateManifest 1
 ;@AHK2Exe-SetDescription InputTip - 一个输入法状态提示工具
 
-#Include .\utils\ini.ahk
-#Include .\utils\IME.ahk
-#Include .\utils\check-version.ahk
-#Include .\menu\tray-menu.ahk
-#Include .\utils\tools.ahk
-#Include .\utils\app-list.ahk
-#Include .\utils\verify-file.ahk
-#Include .\utils\create-gui.ahk
+#Include ./utils/ini.ahk
+#Include ./utils/IME.ahk
+#Include ./utils/check-version.ahk
+#Include ./menu/tray-menu.ahk
+#Include ./utils/tools.ahk
+#Include ./utils/app-list.ahk
+
+baseUrl := ["https://gitee.com/abgox/InputTip/raw/main/", "https://github.com/abgox/InputTip/raw/main/"]
+
+#Include ./utils/verify-file.ahk
+#Include ./utils/create-gui.ahk
 
 filename := SubStr(A_ScriptName, 1, StrLen(A_ScriptName) - 4)
 fileLnk := filename ".lnk"
 fileDesc := "InputTip - 一个输入法状态提示工具"
+JAB_PID := ""
 
-; 注册表: 开机自启动
-HKEY_startup := "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run"
+
+try {
+    keyCount := A_Args[1]
+} catch {
+    keyCount := 0
+}
 
 gc := {
     init: 0,
@@ -67,19 +78,31 @@ gc := {
     }
 }
 
+TraySetIcon(A_ScriptDir "\InputTipSymbol\default\favicon.png", , 1)
+
 checkIni() ; 检查配置文件
 
 userName := readIni("userName", A_UserName, "UserInfo")
 
-favicon := A_IsCompiled ? A_ScriptFullPath : A_ScriptDir "\img\favicon.ico"
+if (A_IsCompiled) {
+    favicon := A_ScriptFullPath
+} else {
+    favicon := A_ScriptDir "\img\favicon.ico"
 
-TraySetIcon(A_ScriptDir "\InputTipSymbol\default\favicon.png", , 1)
+    ; 当运行源代码时，是否直接以管理员权限运行
+    runCodeWithAdmin := readIni("runCodeWithAdmin", 0)
+    if (runCodeWithAdmin && !A_IsAdmin) {
+        try {
+            Run '*RunAs "' A_AhkPath '" /restart "' A_ScriptFullPath '" ' keyCount
+        }
+    }
+}
 
 checkUpdateDone()
 
 checkUpdateDelay := readIni("checkUpdateDelay", 1440)
 
-#Include .\utils\var.ahk
+#Include ./utils/var.ahk
 
 checkUpdate(1)
 
@@ -104,11 +127,6 @@ if (hotkey_Pause) {
     }
 }
 
-try {
-    keyCount := A_Args[1]
-} catch {
-    keyCount := 0
-}
 enableKeyCount := readIni("enableKeyCount", 0)
 trayTipTemplate := readIni("trayTipTemplate", "【%appState%中】" fileDesc)
 keyCountTemplate := readIni("keyCountTemplate", "%\n%启动至今，有效的按键次数: %keyCount%")
@@ -192,7 +210,7 @@ returnCanShowSymbol(&left, &top, &right, &bottom) {
     return res && left
 }
 
-#Include .\utils\show.ahk
+#Include ./utils/show.ahk
 
 /**
  * @link https://github.com/Tebayaki/AutoHotkeyScripts/blob/main/lib/GetCaretPosEx/GetCaretPosEx.ahk

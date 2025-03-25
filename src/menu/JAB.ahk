@@ -1,3 +1,5 @@
+; InputTip
+
 fn_JAB(item, *) {
     global enableJABSupport := !enableJABSupport
     writeIni("enableJABSupport", enableJABSupport)
@@ -38,10 +40,7 @@ fn_JAB(item, *) {
         SetTimer(killAppTimer, -1)
         killAppTimer() {
             try {
-                killJAB(1, A_IsCompiled)
-                if (A_IsAdmin) {
-                    Run('schtasks /delete /tn "abgox.InputTip.JAB.JetBrains" /f', , "Hide")
-                }
+                killJAB(1, A_IsCompiled || A_IsAdmin)
             }
         }
     }

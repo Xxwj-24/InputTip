@@ -68,7 +68,7 @@
   - [输入法和应用窗口兼容情况](#兼容情况)
   - [issues](https://github.com/abgox/InputTip/issues)
   - ...
-- 如果仍有问题，可以前往 [QQ 反馈交流群(451860327)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=ZfHFP_gIMyY6kZvqRmJhrsMlvnLDjLf6&authKey=lXo50SvLgudu%2BettInNZdb2OXGjs%2BxsoqsKIB88Vcq%2FjMb9uEW5thwU5Nm85KNX4&noverify=0&group_code=451860327) 或 [QQ 频道](https://pd.qq.com/s/gyers18g6?businessType=5) 求助
+- 如果仍有问题，可以前往 [QQ 反馈交流群(451860327)](http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=ZfHFP_gIMyY6kZvqRmJhrsMlvnLDjLf6&authKey=lXo50SvLgudu%2BettInNZdb2OXGjs%2BxsoqsKIB88Vcq%2FjMb9uEW5thwU5Nm85KNX4&noverify=0&group_code=451860327) 或 [腾讯频道](https://pd.qq.com/s/gyers18g6?businessType=5) 交流反馈
 
 ### 演示
 
@@ -78,44 +78,32 @@
 
 > [!Tip]
 >
-> 配置信息保存在 `InputTip.exe` 同级目录下的 `InputTip.ini` 配置文件中
+> - [关于 zip 与 exe 版本的区别以及相关说明](https://inputtip.abgox.com/FAQ/zip-vs-exe)
+> - 配置文件所在位置
+>   - zip 版本: 解压后的 `src` 目录下的 `InputTip.ini`
+>   - exe 版本: `InputTip.exe` 同级目录下的 `InputTip.ini`
 
-> [!Warning]
->
-> - 如果使用下方的 [Scoop](https://scoop.sh/) 安装命令，无法通过 `scoop update InputTip` 进行更新
-> - 如果使用下方的 [WinGet](https://github.com/microsoft/winget-cli) 安装命令，不要通过 [WinGet](https://github.com/microsoft/winget-cli) 进行二次安装或更新，这会导致配置文件丢失
-> - 因此，以下安装方式都只建议首次下载安装时使用，然后通过 InputTip 内置的 [更新检查](https://inputtip.abgox.com/FAQ/check-update) 进行更新
+1. [前往官网下载 InputTip](https://inputtip.abgox.com/download)
 
-1. 使用 [Scoop](https://scoop.sh/) 安装:
+   - 也可以在仓库的 Releases 中下载
 
-   ```shell
-   scoop install https://inputtip.abgox.com/installer/scoop/InputTip.json
-   ```
-
-2. 使用 [WinGet](https://github.com/microsoft/winget-cli) 安装:
+2. 使用 [WinGet](https://learn.microsoft.com/windows/package-manager/winget/) 安装(exe 版本)
 
    ```shell
    winget install abgox.InputTip
    ```
 
-3. [手动下载 InputTip.exe 或 InputTip.zip](https://inputtip.abgox.com/download)
+3. 使用 [Scoop](https://scoop.sh/) 安装(exe 版本)
 
-   - 下载 `InputTip.zip` 解压并运行其中的 `InputTip.exe`
-
-   - 下载 `InputTip.exe` 并运行它
-
-     - **建议首先新建一个目录，将 `InputTip.exe` 放入其中，然后再运行它**
-       - 因为运行 `InputTip.exe` 后，会产生以下文件或文件夹
-         - `InputTip.ini` 配置文件
-         - `InputTipSymbol` 图片符号文件夹
-         - `InputTipCursor` 鼠标样式文件夹
-       - **这样做，所有相关的文件或文件夹都在同一个目录中，方便管理**
+   ```shell
+   scoop install https://inputtip.abgox.com/installer/scoop/InputTip.json
+   ```
 
 ### 使用
 
 > [!Tip]
 >
-> [你也可以直接通过运行项目源代码的方式使用 InputTip](https://inputtip.abgox.com/FAQ/run-source-code)
+> [下载 zip 版本(InputTip.zip)，直接运行项目源代码](https://inputtip.abgox.com/FAQ/run-source-code)
 
 1. 完成 [安装](#安装) 后，运行 `InputTip.exe` 即可
 
@@ -341,18 +329,18 @@
 
   - 一个万能的模式，需要根据实际情况设置 **状态码(规则)** 和 **切换码(规则)**
   - 详情参考: [关于【自定义】模式](https://inputtip.abgox.com/FAQ/custom-input-mode)
-  - 可以通过 `设置输入法模式` => `自定义` 使用以下已知可用的配置:
+  - 可以通过 `设置输入法模式` => `自定义` 使用以下已知可用的规则配置:
 
-    - 选择 `英文状态` 作为判断依据( `中文状态` 相反)
+    - 配置 `如果所有规则都不匹配，应该判断为` 选择 `中文状态` ( `英文状态` 相反)
 
-      - [小鹤音形](https://flypy.com/download/)
-        - 经过测试，`v10.11.4` 版本中，在 `切换码数字`的输入框中填入 `257` 即可
+    - - [小鹤音形](https://flypy.com/download/)
+        - 经过测试，`v10.11.4` 版本中，添加规则，在 `切换码规则`下的 `指定数字` 中填入 `257` 即可
       - [小狼毫(rime)输入法](https://rime.im/download/)
-        - 经过测试，`v0.16.1` 版本中，勾选 `切换码规则` 中的 `使用偶数` 即可
+        - 经过测试，`v0.16.1` 版本中，添加规则，在 `切换码规则`下的 `指定规律` 中选择 `使用偶数` 即可
       - [讯飞输入法](https://srf.xunfei.cn/)
-        - 经过测试，`v3.0` 版本中，勾选 `状态码规则` 中的 `使用奇数` 即可
+        - 经过测试，`v3.0` 版本中，添加规则，在 `状态码规则`下的 `指定规律` 中选择 `使用奇数` 即可
       - [手心输入法](https://www.xinshuru.com/)
-        - 经过测试，`v3.1` 版本中，在 `切换码数字`的输入框中填入 `1` 即可
+        - 经过测试，`v3.1` 版本中，添加规则，在 `切换码规则`下的 `指定数字` 中填入 `1` 即可
         - 获取到的输入法状态可能有误，导致基于此的相关功能都可能有问题
 
 ### 参考项目

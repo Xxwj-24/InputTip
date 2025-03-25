@@ -1,3 +1,5 @@
+; InputTip
+
 fn_about(*) {
     if (gc.w.aboutGui) {
         gc.w.aboutGui.Destroy()
@@ -5,7 +7,7 @@ fn_about(*) {
     }
     createGui(aboutGui).Show()
     aboutGui(info) {
-        g := createGuiOpt("InputTip - v" currentVersion)
+        g := createGuiOpt("InputTip - v" currentVersion " - " (A_IsAdmin ? "以管理员权限启动" : "以当前用户权限启动"))
 
         g.AddText("Center w" info.w, "InputTip - 一个输入法状态实时提示工具")
         tab := g.AddTab3("-Wrap", ["关于项目", "赞赏支持", "参考项目", "其他项目"])
@@ -18,7 +20,7 @@ fn_about(*) {
         g.AddEdit("yp ReadOnly", '1151676611')
         g.AddLink("xs", 'QQ 反馈交流群( <a href="http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=ZfHFP_gIMyY6kZvqRmJhrsMlvnLDjLf6&authKey=lXo50SvLgudu%2BettInNZdb2OXGjs%2BxsoqsKIB88Vcq%2FjMb9uEW5thwU5Nm85KNX4&noverify=0&group_code=451860327">点击加入</a> ): ')
         g.AddEdit("yp ReadOnly", '451860327')
-        g.AddLink("xs", 'QQ 反馈交流频道( <a href="https://pd.qq.com/s/gyers18g6?businessType=5">点击加入</a> )')
+        g.AddLink("xs", '腾讯频道( <a href="https://pd.qq.com/s/gyers18g6?businessType=5">点击加入</a> )')
 
         if (info.i) {
             g.AddText("xs", "-------------------------------------------------------------------------------")
@@ -34,7 +36,7 @@ fn_about(*) {
         tab.UseTab(2)
         g.AddLink("Section", '- 通过 <a href="https://ko-fi.com/W7W817R6Z3">ko-fi.com</a> 赞赏支持')
         g.AddText("xs", '- 通过微信和支付宝赞赏支持')
-        g.AddPicture("h-1 w" w / 4 * 3, "InputTipSymbol\default\offer.png")
+        g.AddPicture("h-1 w" w / 4 * 3, "InputTipSymbol/default/offer.png")
         tab.UseTab(3)
         g.AddLink("Section", '1. <a href="https://github.com/aardio/ImTip">ImTip - aardio</a>')
         g.AddLink("xs", '2. <a href="https://github.com/flyinclouds/KBLAutoSwitch">KBLAutoSwitch - flyinclouds</a>')

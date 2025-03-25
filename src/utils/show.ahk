@@ -1,3 +1,5 @@
+; InputTip
+
 updateDelay()
 
 ; 鼠标悬浮在符号上
@@ -6,7 +8,7 @@ while 1 {
     Sleep(delay)
     ; 正在使用鼠标或有键盘操作
     if (A_TimeIdle < leaveDelay) {
-        needShow := 1
+        needShow := symbolType
         if (symbolType && hoverHide) {
             if (isMouseOver("abgox-InputTip-Symbol-Window")) {
                 hideSymbol()
@@ -41,7 +43,7 @@ while 1 {
                 }
             }
         }
-        if (!symbolType || needHide || (!showCursorPos && isMouseOver("ahk_class Shell_TrayWnd"))) {
+        if (needHide) {
             hideSymbol()
             needShow := 0
         }
