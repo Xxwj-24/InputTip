@@ -15,6 +15,11 @@
 #Include ./utils/app-list.ahk
 
 baseUrl := ["https://gitee.com/abgox/InputTip/raw/main/", "https://github.com/abgox/InputTip/raw/main/"]
+favicon_png := A_ScriptDir "\InputTipSymbol\default\favicon.png"
+
+if (FileExist(favicon_png)) {
+    TraySetIcon(favicon_png, , 1)
+}
 
 #Include ./utils/verify-file.ahk
 #Include ./utils/create-gui.ahk
@@ -27,6 +32,9 @@ JAB_PID := ""
 
 try {
     keyCount := A_Args[1]
+    if (!IsNumber(keyCount)) {
+        keyCount := 0
+    }
 } catch {
     keyCount := 0
 }
@@ -78,7 +86,7 @@ gc := {
     }
 }
 
-TraySetIcon(A_ScriptDir "\InputTipSymbol\default\favicon.png", , 1)
+TraySetIcon(favicon_png, , 1)
 
 checkIni() ; 检查配置文件
 
@@ -204,8 +212,11 @@ returnCanShowSymbol(&left, &top, &right, &bottom) {
         return 0
     }
     try {
-        left += app_offset.%exe_name%.%isWhichScreen(screenList).num%.x
-        top += app_offset.%exe_name%.%isWhichScreen(screenList).num%.y
+        s := isWhichScreen(screenList)
+        if (s != "") {
+            left += app_offset.%exe_name%.%s.num%.x
+            top += app_offset.%exe_name%.%s.num%.y
+        }
     }
     return res && left
 }

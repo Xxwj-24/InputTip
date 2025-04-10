@@ -122,7 +122,7 @@ checkUpdate(init := 0, once := false, force := 0) {
                         g.AddText("yp cRed", newVersion)
                         g.AddText("xs", "---------------------------------------------------------")
                         g.AddLink("xs", '版本更新日志:   <a href="https://inputtip.abgox.com/v2/changelog">官网</a>   <a href="https://github.com/abgox/InputTip/blob/main/src/CHANGELOG.md">Github</a>   <a href="https://gitee.com/abgox/InputTip/blob/main/src/CHANGELOG.md">Gitee</a>')
-                        g.AddText("cRed", "点击确认更新后，会自动下载新版本替代旧版本并重启`n")
+                        g.AddText("cRed", "点击「确认更新」后，会自动下载新版本替代旧版本并重启`n如果只是暂时不想更新，可以点击右上角的 X 关闭此窗口`n")
 
                         if (info.i) {
                             return g
@@ -137,7 +137,6 @@ checkUpdate(init := 0, once := false, force := 0) {
                             g.Destroy()
                             releases := [
                                 "https://gitee.com/abgox/InputTip/releases/download/v" newVersion "/InputTip.exe",
-                                "https://inputtip.abgox.com/releases/v2/InputTip.exe",
                                 "https://github.com/abgox/InputTip/releases/download/v" newVersion "/InputTip.exe"
                             ]
                             done := false
@@ -162,9 +161,10 @@ checkUpdate(init := 0, once := false, force := 0) {
 
                             for v in releases {
                                 try {
-                                    Download(v, A_AppData "/abgox-InputTip-new-version.exe")
+                                    out := A_ScriptDir "/InputTipSymbol/default/abgox-InputTip-new-version.exe"
+                                    Download(v, out)
                                     ; 尝试获取版本号，成功获取则表示下载没有问题
-                                    done := FileGetVersion(A_AppData "/abgox-InputTip-new-version.exe")
+                                    done := compareVersion(FileGetVersion(out), currentVersion) > 0
                                     break
                                 }
                             }
@@ -176,8 +176,8 @@ checkUpdate(init := 0, once := false, force := 0) {
                                     killJAB(1, A_IsCompiled)
                                 }
                                 try {
-                                    FileInstall("utils/app-update/target/release/app-update.exe", A_AppData "/abgox-InputTip-update-version.exe", 1)
-                                    Run(A_AppData "/abgox-InputTip-update-version.exe " '"' A_ScriptName '" "' A_ScriptFullPath '" ' keyCount, , "Hide")
+                                    FileInstall("utils/app-update/target/release/app-update.exe", A_ScriptDir "/InputTipSymbol/default/abgox-InputTip-update-version.exe", 1)
+                                    Run(A_ScriptDir "/InputTipSymbol/default/abgox-InputTip-update-version.exe " '"' A_ScriptName '" "' A_ScriptFullPath '" ' keyCount, , "Hide")
                                     ExitApp()
                                 } catch {
                                     done := false
@@ -376,10 +376,11 @@ getRepoCode(newVersion) {
         downloadingGui := downloading()
 
         doneFileList := []
-        for kv in files {
+        fileCount := files.Length
+        for i, kv in files {
             p := StrSplit(kv, "=")
             for u in baseUrl {
-                tip.Text := p[1]
+                tip.Text := i '/' fileCount " : " p[1]
                 out := p[2] ".new"
                 if (InStr(out, "/")) {
                     dir := RegExReplace(out, "/[^/]*$", "")
@@ -422,7 +423,7 @@ getRepoCode(newVersion) {
                 FileMove(v, RegExReplace(v, "\.new$", ""), 1)
             }
             if (newVersion) {
-                FileAppend("", A_AppData "/.abgox-InputTip-update-version-done.txt")
+                FileAppend("", A_ScriptDir "/InputTipSymbol/default/abgox-InputTip-update-version-done.txt")
             }
             fn_restart()
         }
@@ -482,48 +483,10 @@ getRepoCode(newVersion) {
  * 当更新完成时弹出提示框
  */
 checkUpdateDone() {
-    if (FileExist(A_AppData "/.abgox-InputTip-update-version-done.txt")) {
-        modeRules := []
-        try {
-            _ := IniRead("InputTip.ini", "InputMethod", "statusMode")
-            modeRules.Push(StrReplace(RegExReplace(_, "(^:)|(:$)", ""), ":", "/"))
-            IniDelete("InputTip.ini", "InputMethod", "statusMode")
-        }
-        try {
-            _ := IniRead("InputTip.ini", "InputMethod", "conversionMode")
-            modeRules.Push(StrReplace(RegExReplace(_, "(^:)|(:$)", ""), ":", "/"))
-            IniDelete("InputTip.ini", "InputMethod", "conversionMode")
-        }
-        try {
-            _ := IniRead("InputTip.ini", "InputMethod", "evenStatusMode")
-            if (_ != "") {
-                modeRules[1] := _ ? "evenNum" : "oddNum"
-            }
-            IniDelete("InputTip.ini", "InputMethod", "evenStatusMode")
-        }
-        try {
-            _ := IniRead("InputTip.ini", "InputMethod", "evenConversionMode")
-            if (_ != "") {
-                modeRules[2] := _ ? "evenNum" : "oddNum"
-            }
-            IniDelete("InputTip.ini", "InputMethod", "evenConversionMode")
-        }
-        if (modeRules.Length) {
-            baseStatus := readIni("baseStatus", 0, "InputMethod")
-            modeRules.Push(baseStatus)
-            writeIni("baseStatus", !baseStatus, "InputMethod")
-            writeIni("modeRule", arrJoin(modeRules, "*"), "InputMethod")
-        }
-        try {
-            _ := IniRead("InputTip.ini", "Config-v2", "JetBrains_list")
-            writeIni("cursor_mode_JAB", _)
-            IniDelete("InputTip.ini", "Config-v2", "JetBrains_list")
-        }
-        try {
-            _ := IniRead("InputTip.ini", "Config-v2", "enableJetBrainsSupport")
-            writeIni("enableJABSupport", _)
-            IniDelete("InputTip.ini", "Config-v2", "enableJetBrainsSupport")
-        }
+    oldVersion := readIni("version", currentVersion, "UserInfo")
+    flagFile := A_AppData "/.abgox-InputTip-update-version-done.txt"
+    flagFile2 := A_ScriptDir "/InputTipSymbol/default/abgox-InputTip-update-version-done.txt"
+    if (compareVersion(currentVersion, oldVersion) || FileExist(flagFile) || FileExist(flagFile2)) {
         try {
             ignoreUpdate := IniRead("InputTip.ini", "Config-v2", "ignoreUpdate")
             _ := ignoreUpdate ? 0 : 1440
@@ -561,6 +524,33 @@ checkUpdateDone() {
             }
         }
 
+        modeRules := []
+        for v in ["statusMode", "conversionMode"] {
+            try {
+                _ := IniRead("InputTip.ini", "InputMethod", v)
+                modeRules.Push(StrReplace(RegExReplace(_, "(^:)|(:$)", ""), ":", "/"))
+                IniDelete("InputTip.ini", "InputMethod", v)
+            }
+        }
+        for i, v in ["evenStatusMode", "evenConversionMode"] {
+            try {
+                _ := IniRead("InputTip.ini", "InputMethod", v)
+                if (_ != "") {
+                    modeRules[i] := _ ? "evenNum" : "oddNum"
+                }
+                IniDelete("InputTip.ini", "InputMethod", v)
+            }
+        }
+        if (modeRules.Length) {
+            baseStatus := readIni("baseStatus", 0, "InputMethod")
+            modeRules.Push(baseStatus)
+            writeIni("baseStatus", !baseStatus, "InputMethod")
+            try {
+                IniDelete("InputTip.ini", "InputMethod", "baseStatus")
+            }
+            writeIni("modeRule", arrJoin(modeRules, "*"), "InputMethod")
+        }
+
         try {
             IniRead("InputTip.ini", "Config-v2", "textSymbol_CN_color")
         } catch {
@@ -571,6 +561,19 @@ checkUpdateDone() {
             writeIni("textSymbol_offset_x", readIni('offset_x', 10))
             writeIni("textSymbol_offset_y", readIni('offset_y', -30))
             writeIni("textSymbol_border_type", readIni('border_type', 1))
+        }
+
+        ; 配置项更名
+        replaceConfig := [
+            ["JetBrains_list", "cursor_mode_JAB"],
+            ["enableJetBrainsSupport", "enableJABSupport"],
+        ]
+        for v in replaceConfig {
+            try {
+                _ := IniRead("InputTip.ini", "Config-v2", v[1])
+                writeIni(v[2], _)
+                IniDelete("InputTip.ini", "Config-v2", v[1])
+            }
         }
 
         createGui(doneGui).Show()
@@ -591,17 +594,19 @@ checkUpdateDone() {
 
             y := g.AddButton("xs w" bw, "我知道了")
             y.Focus()
+            g.OnEvent("Close", yes)
             y.OnEvent("Click", yes)
             yes(*) {
                 g.Destroy()
+
+                for v in [flagFile, flagFile2, A_AppData "/abgox-InputTip-update-version.exe", A_ScriptDir "/InputTipSymbol/default/abgox-InputTip-update-version.exe"] {
+                    try {
+                        FileDelete(v)
+                    }
+                }
+                writeIni("version", currentVersion, "UserInfo")
             }
             return g
-        }
-        try {
-            FileDelete(A_AppData "/.abgox-InputTip-update-version-done.txt")
-        }
-        try {
-            FileDelete(A_AppData "/abgox-InputTip-update-version.exe")
         }
     }
 }

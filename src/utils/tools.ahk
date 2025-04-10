@@ -57,6 +57,8 @@ getScreenInfo() {
 }
 
 /**
+ * 激活的窗口在哪个屏幕
+ * 
  * 调用时外层必须使用 try 包裹，因为 MouseGetPos 在极少数情况下，会因为权限问题报错拒绝访问
  * @example
  * try {
@@ -65,9 +67,18 @@ getScreenInfo() {
  * }
  */
 isWhichScreen(screenList) {
-    MouseGetPos(&x, &y)
+    try {
+        WinGetClientPos(&x, &y, &w, &h, "A")
+
+        ; 窗口的中心坐标
+        cx := x + w / 2
+        cy := y + h / 2
+    } catch {
+        return ""
+    }
+
     for v in screenList {
-        if (x >= v.left && x <= v.right && y >= v.top && y <= v.bottom) {
+        if (cx >= v.left && cx <= v.right && cy >= v.top && cy <= v.bottom) {
             return v
         }
     }
