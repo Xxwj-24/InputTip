@@ -5,7 +5,7 @@
 ;@AHK2Exe-SetName InputTip
 ;@Ahk2Exe-SetOrigFilename InputTip.ahk
 ;@Ahk2Exe-UpdateManifest 1
-;@AHK2Exe-SetDescription InputTip - 一个输入法状态提示工具
+;@AHK2Exe-SetDescription InputTip - 一个输入法状态管理工具
 
 #Include ./utils/ini.ahk
 #Include ./utils/IME.ahk
@@ -14,21 +14,23 @@
 #Include ./utils/tools.ahk
 #Include ./utils/app-list.ahk
 
+ID := "InputTip"
+
 baseUrl := ["https://gitee.com/abgox/InputTip/raw/main/", "https://github.com/abgox/InputTip/raw/main/"]
-favicon_png := A_ScriptDir "\InputTipSymbol\default\favicon.png"
+favicon_png := readIni("iconRunning", "InputTipSymbol\default\favicon.png")
 
 if (FileExist(favicon_png)) {
-    TraySetIcon(favicon_png, , 1)
+    setTrayIcon(favicon_png)
 }
 
 #Include ./utils/verify-file.ahk
 #Include ./utils/create-gui.ahk
+#Include ./utils/hotkey-gui.ahk
 
 filename := SubStr(A_ScriptName, 1, StrLen(A_ScriptName) - 4)
 fileLnk := filename ".lnk"
-fileDesc := "InputTip - 一个输入法状态提示工具"
+fileDesc := "InputTip - 一个输入法状态管理工具"
 JAB_PID := ""
-
 
 try {
     keyCount := A_Args[1]
@@ -43,54 +45,21 @@ gc := {
     init: 0,
     timer: 0,
     tab: 0,
-    ; 记录所有的窗口 Gui，同一个 Gui 只允许存在一个
+    ; 记录窗口 Gui，同一个 Gui 只允许存在一个
     w: {
-        ; 开机自启动
-        startupGui: "",
-        ; 设置更新检查
-        checkUpdateGui: "",
-        ; 更改用户信息
-        updateUserGui: "",
-        ; 设置输入法模式
-        inputModeGui: "",
-        ; 设置光标获取模式
-        cursorModeGui: "",
-        ; 设置符号显示位置
-        symbolPosGui: "",
-        setShowPosGui: "",
-        ; 符号显示黑/白名单
-        bwListGui: "",
-        ; 暂停/运行快捷键
-        pauseHotkeyGui: "",
-        ; 更改配置
-        configGui: "",
-        ; 设置状态切换快捷键
-        switchKeyGui: "",
-        ; 指定窗口自动切换状态
-        windowToggleGui: "",
-        ; 设置特殊偏移量
-        appOffsetGui: "",
-        ; 设置指定应用的特殊偏移量
-        offsetGui: "",
-        ; 启用 JAB/JetBrains IDE 支持
-        enableJABGui: "",
-        ; 应用列表
-        blackListGui: "",
-        whiteListGui: "",
-        ; 关于
-        aboutGui: "",
-        ; 二级菜单
-        subGui: "",
-        customModeGui: "",
-        shiftSwitchGui: "",
+        updateGui: "",
+        subGui: ""
     }
 }
 
-TraySetIcon(favicon_png, , 1)
+setTrayIcon(favicon_png)
 
 checkIni() ; 检查配置文件
 
 userName := readIni("userName", A_UserName, "UserInfo")
+
+; g.SetFont(fontOpt*)
+fontOpt := ["s" readIni("gui_font_size", "12"), "Microsoft YaHei"]
 
 if (A_IsCompiled) {
     favicon := A_ScriptFullPath
@@ -102,13 +71,21 @@ if (A_IsCompiled) {
     if (runCodeWithAdmin && !A_IsAdmin) {
         try {
             Run '*RunAs "' A_AhkPath '" /restart "' A_ScriptFullPath '" ' keyCount
+        } catch {
+            createTipGui([{
+                opt: "cRed",
+                text: "以管理员权限启动 InputTip 失败",
+            }], "InputTip - 错误").Show()
+            writeIni("runCodeWithAdmin", 0)
+            global runCodeWithAdmin := 0
         }
     }
 }
 
-checkUpdateDone()
+; 是否静默自动更新
+silentUpdate := readIni("silentUpdate", 0)
 
-checkUpdateDelay := readIni("checkUpdateDelay", 1440)
+checkUpdateDone()
 
 #Include ./utils/var.ahk
 
@@ -132,6 +109,11 @@ if (hotkey_Caps) {
 if (hotkey_Pause) {
     try {
         Hotkey(hotkey_Pause, pauseApp)
+    }
+}
+if (hotkey_ShowCode) {
+    try {
+        Hotkey(hotkey_ShowCode, showCode)
     }
 }
 
@@ -178,16 +160,22 @@ updateTip(flag := "") {
     }
 }
 
-picDir := readIni("picDir", "")
+symbolPaths := readIni("symbolPaths", "")
+iconPaths := readIni("iconPaths", "")
 cursorDir := readIni("cursorDir", "")
 
 SetTimer(getDirTimer, -1)
 getDirTimer() {
-    _picDir := arrJoin(getPicDir(), ":")
+    _symbolPaths := arrJoin(getPicList(), ":")
+    _iconPaths := arrJoin(getPicList(":InputTipSymbol\default\favicon.png:InputTipSymbol\default\favicon-pause.png:", ":InputTipSymbol\default\offer.png:InputTipSymbol\default\Caps.png:InputTipSymbol\default\EN.png:InputTipSymbol\default\CN.png:"), ":")
     _cursorDir := arrJoin(getCursorDir(), ":")
-    if (picDir != _picDir) {
-        global picDir := _picDir
-        writeIni("picDir", _picDir)
+    if (symbolPaths != _symbolPaths) {
+        global symbolPaths := _symbolPaths
+        writeIni("symbolPaths", _symbolPaths)
+    }
+    if (iconPaths != _iconPaths) {
+        global iconPaths := _iconPaths
+        writeIni("iconPaths", _iconPaths)
     }
     if (cursorDir != _cursorDir) {
         global cursorDir := _cursorDir
@@ -197,6 +185,12 @@ getDirTimer() {
 
 makeTrayMenu() ; 生成托盘菜单
 
+
+/**
+ * 跳过 JAB/JetBrains IDE 程序，交由 InputTip.JAB 处理
+ * @param exe_str 进程字符串，如 ":webstorm64.exe:"
+ * @returns {1 | 0} 是否需要跳过
+ */
 needSkip(exe_str) {
     return !showCursorPos && InStr(modeList.JAB, exe_str)
 }
@@ -221,7 +215,6 @@ returnCanShowSymbol(&left, &top, &right, &bottom) {
     return res && left
 }
 
-#Include ./utils/show.ahk
 
 /**
  * @link https://github.com/Tebayaki/AutoHotkeyScripts/blob/main/lib/GetCaretPosEx/GetCaretPosEx.ahk
@@ -630,3 +623,21 @@ end:
         bottom := top + h
     }
 }
+
+
+; 强制显示托盘菜单图标
+SetTimer(showIconTimer, 10000)
+showIconTimer() {
+    static n := 0
+    if (n > 30) {
+        SetTimer(, 0)
+    }
+    n++
+
+    ; 强制显示托盘菜单图标
+    A_IconHidden := 0
+}
+
+; 如果有修改代码的需求，你应该写在此行之前
+; 此行之后的逻辑代码，都会因为 show.ahk 中的死循环而无效
+#Include ./utils/show.ahk

@@ -5,7 +5,7 @@
 #NoTrayIcon
 ;@AHK2Exe-SetName InputTip.JAB
 ;@Ahk2Exe-SetOrigFilename InputTip.JAB.JetBrains.ahk
-;@AHK2Exe-SetDescription InputTip.JAB - 一个输入法状态提示工具
+;@AHK2Exe-SetDescription InputTip.JAB - 一个输入法状态管理工具
 
 #Include ./utils/IME.ahk
 #Include ./utils/ini.ahk
@@ -13,6 +13,16 @@
 #Include ./utils/var.ahk
 #Include ./utils/tools.ahk
 
+ID := "JAB"
+
+; g.SetFont(fontOpt*)
+fontOpt := ["s" readIni("gui_font_size", "12"), "Microsoft YaHei"]
+
+/**
+ * 跳过非 JAB/JetBrains IDE 程序，交由 InputTip 处理
+ * @param exe_str 进程字符串，如 ":webstorm64.exe:"
+ * @returns {1 | 0} 是否需要跳过
+ */
 needSkip(exe_str) {
     return showCursorPos || !InStr(modeList.JAB, exe_str)
 }
@@ -36,8 +46,6 @@ returnCanShowSymbol(&left, &top, &right, &bottom) {
     }
     return left
 }
-
-#Include ./utils/show.ahk
 
 /**
  * Gets the position of the caret with UIA, Acc or CaretGetPos.
@@ -79,3 +87,7 @@ GetCaretPosFromJAB(&X?, &Y?, &W?, &H?) {
         return ret
     }
 }
+
+; 如果有修改代码的需求，你应该写在此行之前
+; 此行之后的逻辑代码，都会因为 show.ahk 中的死循环而无效
+#Include ./utils/show.ahk

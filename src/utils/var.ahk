@@ -1,26 +1,28 @@
 ; InputTip
 
-; g.SetFont(fontOpt*)
-fontOpt := ["s" readIni("gui_font_size", "12"), "Microsoft YaHei"]
+; 更新检查时间间隔，默认是 1440 分钟，即 24 小时
+checkUpdateDelay := readIni("checkUpdateDelay", 1440)
 
 ; 输入法模式
 mode := readIni("mode", 1, "InputMethod")
 
+; 光标获取模式
 modeList := {}
 
-; 以哪一种状态作为判断依据
+; 默认输入法状态(1: 中文, 0: 英文)
+; 在自定义模式下，如果所有规则都不匹配，则返回此状态
 baseStatus := readIni("baseStatus", 0, "InputMethod")
 
+; 自定义模式下定义的模式规则
 modeRule := readIni("modeRule", "", "InputMethod")
 modeRules := StrSplit(modeRule, ":")
 
+; 获取输入法状态的超时时间
 checkTimeout := readIni("checkTimeout", 500, "InputMethod")
 
-; 是否使用 Shift 键切换输入法状态
-useShift := readIni("useShift", 1)
-
-; 是否使用白名单机制
-useWhiteList := readIni("useWhiteList", 0)
+; 指定内部实现切换输入法状态的方式
+switchStatus := readIni("switchStatus", 1)
+switchStatusList := ["{LShift}", "{RShift}", "^{Space}"]
 
 ; 是否改变鼠标样式
 changeCursor := readIni("changeCursor", 0)
@@ -32,12 +34,16 @@ changeCursor := readIni("changeCursor", 0)
     3: 文本符号
 */
 symbolType := readIni("symbolType", 1)
-symbolPos := readIni("symbolType", 1)
+; 符号的垂直偏移量的参考原点
 symbolOffsetBase := readIni("symbolOffsetBase", 0)
 
+; 是否在任意窗口中，符号都显示在鼠标附近
 showCursorPos := readIni("showCursorPos", 0)
-showCursorPosList := ":" readIni("showCursorPosList", "wps.exe") ":"
+; 需要将符号显示在鼠标附近的窗口列表
+ShowNearCursor := StrSplit(readIniSection("ShowNearCursor"), "`n")
+; 符号显示在鼠标附近时的特殊偏移量 x
 showCursorPos_x := readIni("showCursorPos_x", 0)
+; 符号显示在鼠标附近时的特殊偏移量 y
 showCursorPos_y := readIni("showCursorPos_y", -20)
 
 ; 当鼠标悬浮在符号上时，符号是否需要隐藏
@@ -49,21 +55,26 @@ hideSymbolDelay := readIni("hideSymbolDelay", 0)
 ; 每多少毫秒后更新符号的显示位置和状态
 delay := readIni("delay", 20)
 
+; 托盘菜单图标
+iconRunning := readIni("iconRunning", "InputTipSymbol\default\favicon.png")
+iconPaused := readIni("iconPaused", "InputTipSymbol\default\favicon-pause.png")
+
 ; 开机自启动
 isStartUp := readIni("isStartUp", 0)
 
 ; 启用 JAB/JetBrains 支持
 enableJABSupport := readIni("enableJABSupport", 0)
 
-; XXX: 快捷键修改后，必须重启再生效，不重启动态修改 Hotkey 会存在问题
-; 中文快捷键
+; 快捷键: 切换到中文
 hotkey_CN := readIni('hotkey_CN', '')
-; 英文快捷键
+; 快捷键: 切换到英文
 hotkey_EN := readIni('hotkey_EN', '')
-; 大写锁定快捷键
+; 快捷键: 切换到大写锁定
 hotkey_Caps := readIni('hotkey_Caps', '')
-; 软件启停快捷键
+; 快捷键: 软件启停
 hotkey_Pause := readIni('hotkey_Pause', '')
+; 快捷键: 实时显示状态码和切换码
+hotkey_ShowCode := readIni('hotkey_ShowCode', '')
 
 stateMap := {
     CN: "中文状态",
@@ -72,17 +83,29 @@ stateMap := {
     0: "英文状态",
     Caps: "大写锁定"
 }
+stateTextMap := {
+    中文状态: "CN",
+    英文状态: "EN",
+    大写锁定: "Caps"
+}
 
 left := 0, top := 0, right := 0, bottom := 0
 lastWindow := "", lastSymbol := "", lastCursor := ""
 
 needHide := 0
+
 exe_name := ""
-exe_str := "::"
+exe_title := ""
+exe_str := ":" exe_name ":"
 
 leaveDelay := delay + 500
 
 isWait := 0
+
+; 配置菜单默认的宽度参考线
+gui_width_line := "------------------------------------------------------------------------------------"
+
+gui_help_tip := "你首先应该点击上方的【关于】或相关文档查看此菜单的使用说明"
 
 canShowSymbol := 0
 
@@ -171,27 +194,29 @@ updateCursor(init := 0) {
     if (!init) {
         restartJAB()
     }
+    _ := {}
 
-    CN_cursor := readIni("CN_cursor", "InputTipCursor\default\CN")
-    EN_cursor := readIni("EN_cursor", "InputTipCursor\default\EN")
-    Caps_cursor := readIni("Caps_cursor", "InputTipCursor\default\Caps")
+    for state in ["CN", "EN", "Caps"] {
+        dir := readIni(state "_cursor", "InputTipCursor\default\" state)
+        if (!DirExist(dir)) {
+            writeIni(state "_cursor", "InputTipCursor\default\" state)
+            dir := "InputTipCursor\default\" state
+        }
+        _.%state% := dir
 
-    cursor_dir := {
-        EN: EN_cursor,
-        CN: CN_cursor,
-        Caps: Caps_cursor
-    }
-
-    for key in cursor_dir.OwnProps() {
-        Loop Files cursor_dir.%key% "\*.*" {
+        Loop Files dir "\*.*" {
             n := SubStr(A_LoopFileName, 1, StrLen(A_LoopFileName) - 4)
             for v in cursorInfo {
                 if (v.type = n) {
-                    v.%key% := A_LoopFileFullPath
+                    v.%state% := A_LoopFileFullPath
                 }
             }
         }
     }
+
+    CN_cursor := _.CN
+    EN_cursor := _.EN
+    Caps_cursor := _.Caps
 }
 loadCursor(state, change := 0) {
     global lastCursor
@@ -236,9 +261,9 @@ updateSymbol(init := 0) {
     }
     symbolConfig := {
         ; 启用独立配置
-        enableIsolateConfigPic: readIni("enableIsolateConfigPic", "0"),
-        enableIsolateConfigBlock: readIni("enableIsolateConfigBlock", "0"),
-        enableIsolateConfigText: readIni("enableIsolateConfigText", "0"),
+        enableIsolateConfigPic: readIni("enableIsolateConfigPic", 0),
+        enableIsolateConfigBlock: readIni("enableIsolateConfigBlock", 0),
+        enableIsolateConfigText: readIni("enableIsolateConfigText", 0),
     }
 
     infoCN := {
@@ -258,10 +283,16 @@ updateSymbol(init := 0) {
     }
 
     for state in ["", "CN", "EN", "Caps"] {
-        ; * 图片字符相关配置
+        ; * 图片符号相关配置
         ; 文件路径
         if (state) {
-            symbolConfig.%state "_pic"% := readIni(state "_pic", "InputTipSymbol\default\" state ".png")
+            defaultPath := "InputTipSymbol\default\" state ".png"
+            picPath := readIni(state "_pic", defaultPath)
+            if (!FileExist(picPath)) {
+                writeIni(state "_pic", defaultPath)
+                picPath := defaultPath
+            }
+            symbolConfig.%state "_pic"% := picPath
         }
         ; 偏移量
         _ := "pic_offset_x" state
@@ -529,7 +560,7 @@ pauseApp(*) {
     if (A_IsPaused) {
         updateTip(!A_IsPaused)
         A_TrayMenu.Uncheck("暂停/运行")
-        TraySetIcon("InputTipSymbol/default/favicon.png", , 1)
+        setTrayIcon(iconRunning)
         reloadSymbol()
         if (enableJABSupport) {
             runJAB()
@@ -537,7 +568,7 @@ pauseApp(*) {
     } else {
         updateTip(!A_IsPaused)
         A_TrayMenu.Check("暂停/运行")
-        TraySetIcon("InputTipSymbol/default/favicon-pause.png", , 1)
+        setTrayIcon(iconPaused)
         hideSymbol()
         if (enableJABSupport) {
             killJAB(0)
@@ -559,7 +590,7 @@ restartJAB() {
         SetTimer(restartAppTimer, -1)
         restartAppTimer() {
             done := 0
-            killJAB(1, 0)
+            killJAB(1)
             if (A_IsAdmin) {
                 try {
                     Run('schtasks /run /tn "abgox.InputTip.JAB.JetBrains"', , "Hide")
@@ -573,6 +604,7 @@ restartJAB() {
     }
 }
 
+; 更新符号显示黑白名单和自动切换列表
 updateList(init := 0) {
     global
 
@@ -580,32 +612,52 @@ updateList(init := 0) {
         restartJAB()
     }
     ; 应用列表: 符号显示黑名单
-    app_hide_state := ":" readIni('app_hide_state', '') ":"
+    app_HideSymbol := StrSplit(readIniSection("App-HideSymbol"), "`n")
 
     ; 应用列表: 符号显示白名单
-    app_show_state := ":" readIni('app_show_state', '') ":"
+    app_ShowSymbol := StrSplit(readIniSection("App-ShowSymbol"), "`n")
 
-    ; 应用列表: 自动切换到中文
-    app_CN := ":" readIni('app_CN', '') ":"
-    ; 应用列表: 自动切换到英文
-    app_EN := ":" readIni('app_EN', '') ":"
-    ; 应用列表: 自动切换到大写锁定
-    app_Caps := ":" readIni('app_Caps', '') ":"
+    updateAutoSwitchList()
 }
+
+; 更新自动切换列表
+updateAutoSwitchList() {
+    global
+    ; 应用列表: 自动切换到中文
+    app_CN := StrSplit(readIniSection("App-CN"), "`n")
+    ; 应用列表: 自动切换到英文
+    app_EN := StrSplit(readIniSection("App-EN"), "`n")
+    ; 应用列表: 自动切换到大写锁定
+    app_Caps := StrSplit(readIniSection("App-Caps"), "`n")
+}
+
+/**
+ * 将进程以【进程级】添加到白名单中
+ * @param app 要添加的进程名称
+ */
 updateWhiteList(app) {
-    if (!useWhiteList) {
-        return
-    }
-    global app_show_state
-    _app_show_state := readIni("app_show_state", "")
-    if (!InStr(app_show_state, ":" app ":")) {
-        if (_app_show_state) {
-            _app_show_state .= ":" app
-        } else {
-            _app_show_state := app
+    exist := 0
+
+    for v in StrSplit(readIniSection("App-ShowSymbol"), "`n") {
+        kv := StrSplit(v, "=", , 2)
+        part := StrSplit(kv[2], ":", , 3)
+        try {
+            if (part[1] == app) {
+                isGlobal := part[2]
+                if (isGlobal) {
+                    exist := 1
+                    return
+                } else {
+                    continue
+                }
+            }
         }
-        app_show_state := ":" _app_show_state ":"
-        writeIni("app_show_state", _app_show_state)
+    }
+    if (!exist) {
+        id := FormatTime(A_Now, "yyyy-MM-dd-HH:mm:ss") "." A_MSec
+        writeIni(id, app ":1", "App-ShowSymbol")
+
+        global app_ShowSymbol := StrSplit(readIniSection("App-ShowSymbol"), "`n")
     }
 }
 updateAppOffset(init := 0) {
@@ -639,23 +691,49 @@ updateCursorMode(init := 0) {
         ACC: ":" arrJoin(defaultModeList.ACC, ":") ":",
         JAB: ":" arrJoin(defaultModeList.JAB, ":") ":"
     }
-    HOOK := readIni('cursor_mode_HOOK', '')
-    UIA := readIni('cursor_mode_UIA', '')
-    GUI_UIA := readIni('cursor_mode_GUI_UIA', '')
-    MSAA := readIni('cursor_mode_MSAA', '')
-    HOOK_DLL := readIni('cursor_mode_HOOK_DLL', '')
-    WPF := readIni('cursor_mode_WPF', '')
-    ACC := readIni('cursor_mode_ACC', '')
-    JAB := readIni('cursor_mode_JAB', '')
 
-    for item in modeNameList {
-        for v in StrSplit(%item%, ":") {
+    InputCursorMode := StrSplit(readIniSection("InputCursorMode"), "`n")
+
+    for v in InputCursorMode {
+        kv := StrSplit(v, "=", , 2)
+        part := StrSplit(kv[2], ":", , 2)
+
+        try {
+            name := part[1]
             for value in modeNameList {
-                modeList.%value% := StrReplace(modeList.%value%, ":" v ":", ":")
+                if (InStr(modeList.%value%, ":" name ":")) {
+                    modeList.%value% := StrReplace(modeList.%value%, ":" name ":", ":")
+                }
             }
+            modeList.%part[2]% .= name ":"
         }
     }
-    for item in modeNameList {
-        modeList.%item% .= %item% ":"
+}
+
+; 显示实时的状态码和切换码
+showCode(*) {
+    if (gc.timer) {
+        gc.timer := 0
+        try {
+            gc.status_btn.Text := "显示实时的状态码和切换码(双击设置快捷键)"
+        }
+        return
+    }
+
+    gc.timer := 1
+    try {
+        gc.status_btn.Text := "停止显示实时的状态码和切换码(双击设置快捷键)"
+    }
+
+    SetTimer(statusTimer, 25)
+    statusTimer() {
+        if (!gc.timer) {
+            ToolTip()
+            SetTimer(, 0)
+            return
+        }
+
+        info := IME.CheckInputMode()
+        ToolTip("状态码: " info.statusMode "`n切换码: " info.conversionMode)
     }
 }
